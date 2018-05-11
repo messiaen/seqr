@@ -60,23 +60,55 @@ class Command(BaseCommand):
             A Family object
             
         Returns:
-            pass
+            ([dict]) representing a list of dicts of variants of that family
         '''
-        fam_details={
-                'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id
-            }
+        fam_details=[]
         for indiv in fam.get_individuals():
             genotype_data_for_indiv = self.get_genotype_data_for_indiv(fam.project.project_id,
                                              fam.family_id,
                                              indiv.indiv_id)
             for i,entry in enumerate(genotype_data_for_indiv):
                 if input_dets_on_fam['gene_name'] in entry['auxiliary']['gene_symbol']:
-                    fam_details['start'] = entry['variant']['start']
-                    fam_details['start'] = entry['variant']['stop']
-                    fam_details['chromosome'] = entry['variant']['chromosome']
-                    fam_details['reference_allele'] = entry['variant']['reference_allele']
-                    fam_details['alternate_allele'] = entry['variant']['alternate_allele']
+                    fam_details.append({
+                                    'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id,
+                                    'start' : entry['variant']['start'],
+                                    'stop' : entry['variant']['stop'],
+                                    'chromosome' : entry['variant']['chromosome'],
+                                    'reference_allele' : entry['variant']['reference_allele'],
+                                    'alternate_allele' : entry['variant']['alternate_allele'],
+                                    'hgvs.c':self.get_hgvsc(entry),
+                                    'hgvs.p':self.get_hgvsp(entry)
+                                 })
+                    print(fam_details)
+                    
         return fam_details
+        
+        
+    def get_hgvsc(self,entry):
+        '''
+        Given a set of variant information, construct a HGVS.c format
+        
+        Args:
+            (dict) a data structure representing a single variant
+            
+        Returns:
+            A variant described in HGVS.c format
+        '''
+        return  'c.%s%s>%s' % (entry['variant']['start'],entry['variant']['reference_allele'],entry['variant']['alternate_allele'])
+        
+     
+    def get_hgvsp(self,entry):
+        '''
+        Given a set of variant information, construct a HGVS.p format
+        
+        Args:
+            (dict) a data structure representing a single variant
+            
+        Returns:
+            A variant described in HGVS.p format
+        '''
+        return 'p.'
+        
         
         
     def get_genotype_data_for_indiv(self,project_id,family_id,indiv_id):
@@ -117,12 +149,7 @@ class Command(BaseCommand):
                                  })
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
-        for variant in variants:
-            start = variant['variant']['pos']
-            reference_bases = variant['variant']['ref']
-            alternate_bases = variant['variant']['alt']
-            end = int(variant['variant']['pos_end']) #int and long are unified in python
-            reference_name = variant['variant']['chr'].replace('chr','')        
+        for variant in variants:     
             #now we have more than 1 gene associated to these VAR postions,
             #so we will associate that information to each gene symbol
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
@@ -130,11 +157,11 @@ class Command(BaseCommand):
                 genomic_feature['gene'] ={"id": gene_id }
                 genomic_feature['variant']={
                                             'assembly':current_genome_assembly,
-                                            'reference_allele':reference_bases,
-                                            'alternate_allele':alternate_bases,
-                                            'start':start,
-                                            'stop':end,
-                                            'chromosome':reference_name
+                                            'reference_allele':variant['variant']['ref'],
+                                            'alternate_allele':variant['variant']['alt'],
+                                            'start':variant['variant']['pos'],
+                                            'stop':int(variant['variant']['pos_end']),
+                                            'chromosome':variant['variant']['chr']
                                             }
                 genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
                 gene_symbol=""
