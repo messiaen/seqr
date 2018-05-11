@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import ProjectTag, VariantTag
 from xbrowse_server.mall import get_datastore
 from xbrowse_server.mall import get_reference
+from xbrowse_server.api import utils as api_utils
 
 logger = logging.getLogger()
     
@@ -147,9 +148,15 @@ class Command(BaseCommand):
                                      "family": variant_tag.family.toJSON(),
                                      "tag_name": variant_tag.project_tag.tag,
                                  })
+                    
+                    api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=False,
+                                                     add_populations=False)
+                    print (variant)
+        
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
         for variant in variants:     
+            print (variant)
             #now we have more than 1 gene associated to these VAR postions,
             #so we will associate that information to each gene symbol
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
