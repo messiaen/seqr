@@ -77,38 +77,12 @@ class Command(BaseCommand):
                                     'chromosome' : entry['variant']['chromosome'],
                                     'reference_allele' : entry['variant']['reference_allele'],
                                     'alternate_allele' : entry['variant']['alternate_allele'],
-                                    'hgvs.c':self.get_hgvsc(entry),
-                                    'hgvs.p':self.get_hgvsp(entry)
+                                    'hgvs.c':entry['variant']['hgvs_c'],
+                                    'hgvs.p':entry['variant']['hgvs_p'],
                                  })
-                    print(fam_details)
                     
         return fam_details
-        
-        
-    def get_hgvsc(self,entry):
-        '''
-        Given a set of variant information, construct a HGVS.c format
-        
-        Args:
-            (dict) a data structure representing a single variant
-            
-        Returns:
-            A variant described in HGVS.c format
-        '''
-        return  'c.%s%s>%s' % (entry['variant']['start'],entry['variant']['reference_allele'],entry['variant']['alternate_allele'])
-        
-     
-    def get_hgvsp(self,entry):
-        '''
-        Given a set of variant information, construct a HGVS.p format
-        
-        Args:
-            (dict) a data structure representing a single variant
-            
-        Returns:
-            A variant described in HGVS.p format
-        '''
-        return 'p.'
+
         
         
         
@@ -143,23 +117,20 @@ class Command(BaseCommand):
                     if variant is None:
                         logging.info("Variant no longer called in this family (did the callset version change?)")
                         continue
+                    api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=False,add_populations=False)
                     variants.append({"variant": variant.toJSON(),
                                      "tag": project_tag.title,
                                      "family": variant_tag.family.toJSON(),
                                      "tag_name": variant_tag.project_tag.tag,
                                  })
-                    
-                    api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=False,
-                                                     add_populations=False)
-                    print (variant)
         
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
         for variant in variants:     
-            print (variant)
             #now we have more than 1 gene associated to these VAR postions,
             #so we will associate that information to each gene symbol
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
+                
                 genomic_feature = {}
                 genomic_feature['gene'] ={"id": gene_id }
                 genomic_feature['variant']={
@@ -168,7 +139,9 @@ class Command(BaseCommand):
                                             'alternate_allele':variant['variant']['alt'],
                                             'start':variant['variant']['pos'],
                                             'stop':int(variant['variant']['pos_end']),
-                                            'chromosome':variant['variant']['chr']
+                                            'chromosome':variant['variant']['chr'],
+                                            'hgvs_c':variant['variant']['annotation']['vep_annotation'][variant['annotation']['worst_vep_annotation_index']]['hgvsc'],
+                                            'hgvs_p':variant['variant']['annotation']['vep_annotation'][variant['annotation']['worst_vep_annotation_index']]['hgvsp']
                                             }
                 genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
                 gene_symbol=""
