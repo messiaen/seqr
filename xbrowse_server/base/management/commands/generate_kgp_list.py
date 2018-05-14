@@ -49,8 +49,31 @@ class Command(BaseCommand):
             for fam in project.get_families():
                 if fam.family_id in list_of_families_to_process:
                     fam_details = self.process_family(fam,list_of_families_to_process[fam.family_id])
+                    self.write_to_file(fam_details,'/Users/harindra/Desktop/kgp_populated.txt')
 
 
+    def write_to_file(self,fam_details,out_file_name):
+        '''
+        Write the given family details to file
+        
+        Args:
+            fam_details (list(dict)): list of family details in form of dictionaries
+            out_file_name (str): a name for the output file
+        '''
+        
+        with open(out_file_name,'w') as out:
+            for fam in fam_details:
+                line = "%s,%s,%s,%s,%s,%s,%s,%s\n" % (  fam['seqr_family_page_link'],
+                                                        fam['chromosome'],
+                                                        fam['start'],
+                                                        fam['stop'],
+                                                        fam['reference_allele'],
+                                                        fam['alternate_allele'],
+                                                        fam['hgvs_c'],
+                                                        fam['hgvs_p'])
+                out.write(line)
+                print(line)
+        out.close()
 
         
     def process_family(self,fam,input_dets_on_fam):
@@ -77,8 +100,8 @@ class Command(BaseCommand):
                                     'chromosome' : entry['variant']['chromosome'],
                                     'reference_allele' : entry['variant']['reference_allele'],
                                     'alternate_allele' : entry['variant']['alternate_allele'],
-                                    'hgvs.c':entry['variant']['hgvs_c'],
-                                    'hgvs.p':entry['variant']['hgvs_p'],
+                                    'hgvs_c':entry['variant']['hgvs_c'],
+                                    'hgvs_p':entry['variant']['hgvs_p'],
                                  })
                     
         return fam_details
@@ -130,7 +153,6 @@ class Command(BaseCommand):
             #now we have more than 1 gene associated to these VAR postions,
             #so we will associate that information to each gene symbol
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
-                #print("--",variant['variant'],"--")
                 annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
                 genomic_feature = {}
                 genomic_feature['gene'] ={"id": gene_id }
