@@ -130,7 +130,8 @@ class Command(BaseCommand):
             #now we have more than 1 gene associated to these VAR postions,
             #so we will associate that information to each gene symbol
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
-                
+                #print("--",variant['variant'],"--")
+                annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
                 genomic_feature = {}
                 genomic_feature['gene'] ={"id": gene_id }
                 genomic_feature['variant']={
@@ -140,8 +141,8 @@ class Command(BaseCommand):
                                             'start':variant['variant']['pos'],
                                             'stop':int(variant['variant']['pos_end']),
                                             'chromosome':variant['variant']['chr'],
-                                            'hgvs_c':variant['variant']['annotation']['vep_annotation'][variant['annotation']['worst_vep_annotation_index']]['hgvsc'],
-                                            'hgvs_p':variant['variant']['annotation']['vep_annotation'][variant['annotation']['worst_vep_annotation_index']]['hgvsp']
+                                            'hgvs_c':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'],
+                                            'hgvs_p':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp']
                                             }
                 genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
                 gene_symbol=""
