@@ -62,8 +62,25 @@ class Command(BaseCommand):
         '''
         
         with open(out_file_name,'w') as out:
+            headers="%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
+                                                                        'Family ID (CollPrefix_ID)',
+                                                                        'CMG Internal Project ID(s)',
+                                                                        'Gene Name',
+                                                                        'Seqr family page Link',
+                                                                        'Chromosome',
+                                                                        'Start',
+                                                                        'Stop',
+                                                                        'Reference allele',
+                                                                        'Alternate allele',
+                                                                        'HGVS.C',
+                                                                        'HGVS.P')
+            out.write(headers)
             for fam in fam_details:
-                line = "%s,%s,%s,%s,%s,%s,%s,%s\n" % (  fam['seqr_family_page_link'],
+                line = "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
+                                                        fam['family_id'],
+                                                        fam['cmg_internal_project_id'],
+                                                        fam['gene_name'],
+                                                        fam['seqr_family_page_link'],
                                                         fam['chromosome'],
                                                         fam['start'],
                                                         fam['stop'],
@@ -94,6 +111,9 @@ class Command(BaseCommand):
             for i,entry in enumerate(genotype_data_for_indiv):
                 if input_dets_on_fam['gene_name'] in entry['auxiliary']['gene_symbol']:
                     fam_details.append({
+                                    'family_id':fam.family_id,
+                                    'gene_name':input_dets_on_fam['gene_name'],
+                                    'cmg_internal_project_id':input_dets_on_fam['internal_project_id'],
                                     'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id,
                                     'start' : entry['variant']['start'],
                                     'stop' : entry['variant']['stop'],
