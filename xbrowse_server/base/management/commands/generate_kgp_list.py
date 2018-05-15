@@ -123,7 +123,6 @@ class Command(BaseCommand):
                                     'hgvs_c':entry['variant']['hgvs_c'],
                                     'hgvs_p':entry['variant']['hgvs_p'],
                                  })
-                    
         return fam_details
 
         
@@ -183,8 +182,8 @@ class Command(BaseCommand):
                                             'start':variant['variant']['pos'],
                                             'stop':int(variant['variant']['pos_end']),
                                             'chromosome':variant['variant']['chr'],
-                                            'hgvs_c':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'],
-                                            'hgvs_p':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp']
+                                            'hgvs_c':'c.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'].split('c.')[1],
+                                            'hgvs_p':'p.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'].split('p.')[1]
                                             }
                 genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
                 gene_symbol=""
