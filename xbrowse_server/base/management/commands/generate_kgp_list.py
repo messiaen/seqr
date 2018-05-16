@@ -45,11 +45,12 @@ class Command(BaseCommand):
             list_of_families_to_process=self.process_family_list_file(options['family_list'])
         #going with all projects since the list doesn't have project names properly written to match safely (cutnpaste errors)
         all_projects = Project.objects.all()
+        all_families=[]
         for project in all_projects:
             for fam in project.get_families():
                 if fam.family_id in list_of_families_to_process:
-                    fam_details = self.process_family(fam,list_of_families_to_process[fam.family_id])
-                    self.write_to_file(fam_details,'/Users/harindra/Desktop/kgp_populated.txt')
+                    all_families.extend(self.process_family(fam,list_of_families_to_process[fam.family_id]))
+        self.write_to_file(all_families,'/Users/harindra/Desktop/kgp_populated.txt')
 
 
     def write_to_file(self,fam_details,out_file_name):
@@ -89,7 +90,7 @@ class Command(BaseCommand):
                                                         fam['hgvs_c'],
                                                         fam['hgvs_p'])
                 out.write(line)
-                print(line)
+                print(">>",line)
         out.close()
 
         
@@ -105,23 +106,21 @@ class Command(BaseCommand):
         '''
         fam_details=[]
         for indiv in fam.get_individuals():
-            genotype_data_for_indiv = self.get_genotype_data_for_indiv(fam.project.project_id,
-                                             fam.family_id,
-                                             indiv.indiv_id)
+            genotype_data_for_indiv = self.get_genotype_data_for_indiv(fam.project.project_id,fam.family_id,indiv.indiv_id)
             for i,entry in enumerate(genotype_data_for_indiv):
-                if input_dets_on_fam['gene_name'] in entry['auxiliary']['gene_symbol']:
+                if input_dets_on_fam['gene_name'] in entry['gene_symbol']:
                     fam_details.append({
                                     'family_id':fam.family_id,
                                     'gene_name':input_dets_on_fam['gene_name'],
                                     'cmg_internal_project_id':input_dets_on_fam['internal_project_id'],
                                     'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id,
-                                    'start' : entry['variant']['start'],
-                                    'stop' : entry['variant']['stop'],
-                                    'chromosome' : entry['variant']['chromosome'],
-                                    'reference_allele' : entry['variant']['reference_allele'],
-                                    'alternate_allele' : entry['variant']['alternate_allele'],
-                                    'hgvs_c':entry['variant']['hgvs_c'],
-                                    'hgvs_p':entry['variant']['hgvs_p'],
+                                    'start' : entry['start'],
+                                    'stop' : entry['stop'],
+                                    'chromosome' : entry['chromosome'],
+                                    'reference_allele' : entry['reference_allele'],
+                                    'alternate_allele' : entry['alternate_allele'],
+                                    'hgvs_c':entry['hgvs_c'],
+                                    'hgvs_p':entry['hgvs_p'],
                                  })
         return fam_details
 
@@ -169,35 +168,37 @@ class Command(BaseCommand):
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
         for variant in variants:     
-            #now we have more than 1 gene associated to these VAR postions,
-            #so we will associate that information to each gene symbol
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
                 annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
-                genomic_feature = {}
-                genomic_feature['gene'] ={"id": gene_id }
-                genomic_feature['variant']={
-                                            'assembly':current_genome_assembly,
-                                            'reference_allele':variant['variant']['ref'],
-                                            'alternate_allele':variant['variant']['alt'],
-                                            'start':variant['variant']['pos'],
-                                            'stop':int(variant['variant']['pos_end']),
-                                            'chromosome':variant['variant']['chr'],
-                                            'hgvs_c':'c.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'].split('c.')[1],
-                                            'hgvs_p':'p.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'].split('p.')[1]
-                                            }
-                genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
-                gene_symbol=""
-                if gene_id != "":
-                    gene = get_reference().get_gene(gene_id)
-                    gene_symbol = gene['symbol']
-    
-                genomic_feature['auxiliary']={
-                                              "tag_name":variant['tag_name'],
-                                              "gene_symbol":gene_symbol
-                                              }
-                genomic_features.append(genomic_feature) 
+                genomic_features.append({
+                                    'gene_id':gene_id,
+                                    'gene_symbol':self.get_gene_symbol(gene_id),
+                                    'assembly':current_genome_assembly,
+                                    'reference_allele':variant['variant']['ref'],
+                                    'alternate_allele':variant['variant']['alt'],
+                                    'start':variant['variant']['pos'],
+                                    'stop':int(variant['variant']['pos_end']),
+                                    'chromosome':variant['variant']['chr'],
+                                    'hgvs_c':'c.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'].split('c.')[1] if variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'] else "",
+                                    'hgvs_p':'p.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'].split('p.')[1] if variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'] else ""
+                                })
         return genomic_features
 
+
+    def get_gene_symbol(self,gene_id):
+        '''
+        Given a gene_id, find the symbol from the reference
+        
+        Args:
+            a gene id (str)
+            
+        Returns:
+            (str) a gene symbol; returns empty string if symbol is not found
+        '''
+        gene = get_reference().get_gene(gene_id)
+        gene_symbol = gene['symbol'] if gene else ""
+        return gene_symbol
+        
 
 
     def process_family_list_file(self,file_of_projects):
