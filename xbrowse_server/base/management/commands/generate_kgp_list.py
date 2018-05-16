@@ -170,6 +170,9 @@ class Command(BaseCommand):
         for variant in variants:     
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
                 annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
+                print ('----')
+                print (variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'])
+                print ('----')
                 genomic_features.append({
                                     'gene_id':gene_id,
                                     'gene_symbol':self.get_gene_symbol(gene_id),
@@ -179,10 +182,42 @@ class Command(BaseCommand):
                                     'start':variant['variant']['pos'],
                                     'stop':int(variant['variant']['pos_end']),
                                     'chromosome':variant['variant']['chr'],
-                                    'hgvs_c':'c.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'].split('c.')[1] if variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'] else "",
-                                    'hgvs_p':'p.' + variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'].split('p.')[1] if variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'] else ""
+                                    'hgvs_c': self.format_seqr_hgvs_c(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc']),
+                                    'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
                                 })
         return genomic_features
+    
+    def format_seqr_hgvs_c(self,hgvsc_from_seqr):
+        '''
+        Given a HGVS.c str from seqr, format it
+        
+        Args:
+            (str) a hgvs.c string
+            
+        Returns:
+            (str) formatted string or empty string ""
+        '''
+        if hgvsc_from_seqr and "c." in hgvsc_from_seqr:
+            return 'c.' + hgvsc_from_seqr.split('c.')[1]
+        else:
+            return hgvsc_from_seqr if hgvsc_from_seqr else ""
+        
+        
+    def format_seqr_hgvs_p(self,hgvsp_from_seqr):
+        '''
+        Given a HGVS.p str from seqr, format it
+        
+        Args:
+            (str) a hgvs.p string
+            
+        Returns:
+            (str) formatted string or empty string ""
+        '''
+        if hgvsp_from_seqr and "p." in hgvsp_from_seqr:
+            return 'p.' + hgvsp_from_seqr.split('p.')[1]
+        else:
+            return hgvsp_from_seqr if hgvsp_from_seqr else ""
+            
 
 
     def get_gene_symbol(self,gene_id):
