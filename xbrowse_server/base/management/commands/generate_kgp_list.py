@@ -40,16 +40,16 @@ class Command(BaseCommand):
             Outputs a report printed to stdout
         """
         
-        list_of_families_to_process = [] 
+        families_to_process = [] 
         if options['family_list']:
-            list_of_families_to_process=self.process_family_list_file(options['family_list'])
+            families_to_process=self.process_family_list_file(options['family_list'])
         #going with all projects since the list doesn't have project names properly written to match safely (cutnpaste errors)
         all_projects = Project.objects.all()
         all_families=[]
         for project in all_projects:
             for fam in project.get_families():
-                if fam.family_id in list_of_families_to_process:
-                    all_families.extend(self.process_family(fam,list_of_families_to_process[fam.family_id]))
+                if fam.family_id in families_to_process:
+                    all_families.extend(self.process_family(fam,families_to_process[fam.family_id]))
         self.write_to_file(all_families,'/Users/harindra/Desktop/kgp_populated.txt')
 
 
@@ -99,16 +99,21 @@ class Command(BaseCommand):
         Process a single family
         
         Args:
-            A Family object
+            (obj) A Family object
+            (list of objs with each being having a gene name) the information input in input file
             
         Returns:
             ([dict]) representing a list of dicts of variants of that family
         '''
+        target_gene_symbols=[]
+        for input_fam in input_dets_on_fam:
+            target_gene_symbols.append(input_dets_on_fam['gene_name'])
+        
         fam_details=[]
         for indiv in fam.get_individuals():
             genotype_data_for_indiv = self.get_genotype_data_for_indiv(fam.project.project_id,fam.family_id,indiv.indiv_id)
             for i,entry in enumerate(genotype_data_for_indiv):
-                if input_dets_on_fam['gene_name'] in entry['gene_symbol']:
+                if entry['gene_symbol'] in target_gene_symbols:
                     fam_details.append({
                                     'family_id':fam.family_id,
                                     'gene_name':input_dets_on_fam['gene_name'],
@@ -251,11 +256,18 @@ class Command(BaseCommand):
         with open(file_of_projects,'r') as fi:
             for line in fi:
                 fields=line.rstrip().split('\t')
-                to_process[fields[0]] ={
+                if fields[0] in to_process:
+                    to_process[fields[0]].append({
                                 'family_id':fields[0],
                                 'internal_project_id':fields[1],
                                 'gene_name':fields[2]
-                                }
+                                })
+                else:
+                    to_process[fields[0]] =[{
+                                    'family_id':fields[0],
+                                    'internal_project_id':fields[1],
+                                    'gene_name':fields[2]
+                                    }]
         fi.close()
         return to_process  
 
