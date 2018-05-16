@@ -43,6 +43,7 @@ class Command(BaseCommand):
         families_to_process = [] 
         if options['family_list']:
             families_to_process=self.process_family_list_file(options['family_list'])
+
         #going with all projects since the list doesn't have project names properly written to match safely (cutnpaste errors)
         all_projects = Project.objects.all()
         all_families=[]
@@ -90,7 +91,6 @@ class Command(BaseCommand):
                                                         fam['hgvs_c'],
                                                         fam['hgvs_p'])
                 out.write(line)
-                print(">>",line)
         out.close()
 
         
@@ -107,17 +107,20 @@ class Command(BaseCommand):
         '''
         target_gene_symbols=[]
         for input_fam in input_dets_on_fam:
-            target_gene_symbols.append(input_dets_on_fam['gene_name'])
-        
+            target_gene_symbols.append(input_fam['gene_name'])
         fam_details=[]
         for indiv in fam.get_individuals():
             genotype_data_for_indiv = self.get_genotype_data_for_indiv(fam.project.project_id,fam.family_id,indiv.indiv_id)
+            if target_gene_symbols[0] =='LAMA2':
+                print(target_gene_symbols)
+                print(genotype_data_for_indiv)
+                sys.exit()
             for i,entry in enumerate(genotype_data_for_indiv):
                 if entry['gene_symbol'] in target_gene_symbols:
                     fam_details.append({
                                     'family_id':fam.family_id,
-                                    'gene_name':input_dets_on_fam['gene_name'],
-                                    'cmg_internal_project_id':input_dets_on_fam['internal_project_id'],
+                                    'gene_name':entry['gene_symbol'],
+                                    'cmg_internal_project_id':input_dets_on_fam[0]['internal_project_id'],
                                     'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id,
                                     'start' : entry['start'],
                                     'stop' : entry['stop'],
@@ -175,9 +178,6 @@ class Command(BaseCommand):
         for variant in variants:     
             for i,gene_id in enumerate(variant['variant']['gene_ids']):
                 annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
-                print ('----')
-                print (variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc'])
-                print ('----')
                 genomic_features.append({
                                     'gene_id':gene_id,
                                     'gene_symbol':self.get_gene_symbol(gene_id),
