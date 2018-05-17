@@ -48,7 +48,7 @@ class Command(BaseCommand):
         #going with all projects since the list doesn't have project names properly written to match safely (cutnpaste errors)
         all_projects = Project.objects.all()
         all_families=[]
-        so = open("/Users/harindra/Desktop/skipper.txt",'w')
+        so = open("skipper.txt",'w')
         for project in all_projects:
             for fam in project.get_families():
                 if fam.family_id in families_to_process:
