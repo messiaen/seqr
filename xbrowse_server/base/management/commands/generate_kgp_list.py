@@ -176,9 +176,12 @@ class Command(BaseCommand):
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
         for variant in variants:
+            #import pprint
+            #pprint.pprint(variant)
             annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
+            #pprint.pprint (variant['variant']['annotation']['vep_annotation'][annotation_set_to_use])
             genomic_features.append({
-                                'gene_symbol':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['symbol'],
+                                'gene_symbol':self.get_gene_symbol(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]),
                                 'assembly':current_genome_assembly,
                                 'reference_allele':variant['variant']['ref'],
                                 'alternate_allele':variant['variant']['alt'],
@@ -191,8 +194,9 @@ class Command(BaseCommand):
         return genomic_features
     
     
-    def get_gene_symbol(self,gene_id):
+    def get_gene_symbol(self,variant):
         '''
+        A bug instability in data model has this mix of data
         Given a gene_id, find the symbol from the reference
         
         Args:
@@ -200,9 +204,14 @@ class Command(BaseCommand):
         Returns:
             (str) a gene symbol; returns empty string if symbol is not found
         ''' 
-        gene = get_reference().get_gene(gene_id)
-        gene_symbol = gene['symbol'] if gene else ""
-        return gene_symbol
+        #gene = get_reference().get_gene(gene_id)
+        #gene_symbol = gene['symbol'] if gene else ""
+        #return gene_symbol
+        if 'symbol' in variant:
+            return variant['symbol']
+        if 'gene_symbol' in variant:
+            return variant['gene_symbol']
+        return ""
     
     
     
