@@ -109,33 +109,33 @@ class Command(BaseCommand):
         for input_fam in input_dets_on_fam:
             target_gene_symbols.append(input_fam['gene_name'])
         fam_details=[]
-        for indiv in fam.get_individuals():
-            genotype_data_for_indiv = self.get_genotype_data_for_indiv(fam.project.project_id,fam.family_id,indiv.indiv_id)
-            if target_gene_symbols[0] =='LAMA2':
-                print(target_gene_symbols)
-                print(genotype_data_for_indiv)
-                sys.exit()
-            for i,entry in enumerate(genotype_data_for_indiv):
-                if entry['gene_symbol'] in target_gene_symbols:
-                    fam_details.append({
-                                    'family_id':fam.family_id,
-                                    'gene_name':entry['gene_symbol'],
-                                    'cmg_internal_project_id':input_dets_on_fam[0]['internal_project_id'],
-                                    'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id,
-                                    'start' : entry['start'],
-                                    'stop' : entry['stop'],
-                                    'chromosome' : entry['chromosome'],
-                                    'reference_allele' : entry['reference_allele'],
-                                    'alternate_allele' : entry['alternate_allele'],
-                                    'hgvs_c':entry['hgvs_c'],
-                                    'hgvs_p':entry['hgvs_p'],
-                                 })
+        #for indiv in fam.get_individuals():
+        genotype_data = self.get_genotype_data(fam.project.project_id,fam.family_id)
+        #if target_gene_symbols[0] =='LAMA2':
+        #    print(target_gene_symbols)
+        #    print(genotype_data_for_indiv)
+        #    sys.exit()
+        for i,entry in enumerate(genotype_data):
+            if entry['gene_symbol'] in target_gene_symbols:
+                fam_details.append({
+                                'family_id':fam.family_id,
+                                'gene_name':entry['gene_symbol'],
+                                'cmg_internal_project_id':input_dets_on_fam[0]['internal_project_id'],
+                                'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + fam.project.project_id  +'/family/' + fam.family_id,
+                                'start' : entry['start'],
+                                'stop' : entry['stop'],
+                                'chromosome' : entry['chromosome'],
+                                'reference_allele' : entry['reference_allele'],
+                                'alternate_allele' : entry['alternate_allele'],
+                                'hgvs_c':entry['hgvs_c'],
+                                'hgvs_p':entry['hgvs_p'],
+                             })
         return fam_details
 
         
         
         
-    def get_genotype_data_for_indiv(self,project_id,family_id,indiv_id):
+    def get_genotype_data(self,project_id,family_id):
         '''
         Gets genotype data for this individual
         
@@ -151,6 +151,7 @@ class Command(BaseCommand):
         genomic_features=[]
         variants=[]
         project_tags = ProjectTag.objects.filter(project__project_id=project_id)
+        already_added_variant={}
         for project_tag in project_tags:
             variant_tags = VariantTag.objects.filter(project_tag=project_tag)
             for variant_tag in variant_tags:
@@ -167,29 +168,29 @@ class Command(BaseCommand):
                         logging.info("Variant no longer called in this family (did the callset version change?)")
                         continue
                     api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=False,add_populations=False)
-                    variants.append({"variant": variant.toJSON(),
-                                     "tag": project_tag.title,
-                                     "family": variant_tag.family.toJSON(),
-                                     "tag_name": variant_tag.project_tag.tag,
-                                 })
+                    
+                    if (variant.toJSON()['pos'],variant.toJSON()['pos_end'],variant.toJSON()['chr']) not in already_added_variant:
+                        variants.append({"variant": variant.toJSON(),
+                                         "family": variant_tag.family.toJSON()
+                                     })
+                        already_added_variant[(variant.toJSON()['pos'],variant.toJSON()['pos_end'],variant.toJSON()['chr'])]=1
         
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
         for variant in variants:     
-            for i,gene_id in enumerate(variant['variant']['gene_ids']):
-                annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
-                genomic_features.append({
-                                    'gene_id':gene_id,
-                                    'gene_symbol':self.get_gene_symbol(gene_id),
-                                    'assembly':current_genome_assembly,
-                                    'reference_allele':variant['variant']['ref'],
-                                    'alternate_allele':variant['variant']['alt'],
-                                    'start':variant['variant']['pos'],
-                                    'stop':int(variant['variant']['pos_end']),
-                                    'chromosome':variant['variant']['chr'],
-                                    'hgvs_c': self.format_seqr_hgvs_c(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc']),
-                                    'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
-                                })
+            #for i,gene_id in enumerate(variant['variant']['gene_ids']):
+            annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
+            genomic_features.append({
+                                'gene_symbol':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['symbol'],
+                                'assembly':current_genome_assembly,
+                                'reference_allele':variant['variant']['ref'],
+                                'alternate_allele':variant['variant']['alt'],
+                                'start':variant['variant']['pos'],
+                                'stop':int(variant['variant']['pos_end']),
+                                'chromosome':variant['variant']['chr'],
+                                'hgvs_c': self.format_seqr_hgvs_c(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc']),
+                                'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
+                            })
         return genomic_features
     
     def format_seqr_hgvs_c(self,hgvsc_from_seqr):
@@ -224,21 +225,6 @@ class Command(BaseCommand):
             return hgvsp_from_seqr if hgvsp_from_seqr else ""
             
 
-
-    def get_gene_symbol(self,gene_id):
-        '''
-        Given a gene_id, find the symbol from the reference
-        
-        Args:
-            a gene id (str)
-            
-        Returns:
-            (str) a gene symbol; returns empty string if symbol is not found
-        '''
-        gene = get_reference().get_gene(gene_id)
-        gene_symbol = gene['symbol'] if gene else ""
-        return gene_symbol
-        
 
 
     def process_family_list_file(self,file_of_projects):
