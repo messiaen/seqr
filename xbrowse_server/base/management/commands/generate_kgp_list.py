@@ -109,11 +109,10 @@ class Command(BaseCommand):
         for input_fam in input_dets_on_fam:
             target_gene_symbols.append(input_fam['gene_name'])
         fam_details=[]
-        #for indiv in fam.get_individuals():
         genotype_data = self.get_genotype_data(fam.project.project_id,fam.family_id)
         #if target_gene_symbols[0] =='LAMA2':
         #    print(target_gene_symbols)
-        #    print(genotype_data_for_indiv)
+        #    print(genotype_data)
         #    sys.exit()
         for i,entry in enumerate(genotype_data):
             if entry['gene_symbol'] in target_gene_symbols:
@@ -137,15 +136,14 @@ class Command(BaseCommand):
         
     def get_genotype_data(self,project_id,family_id):
         '''
-        Gets genotype data for this individual
+        Gets genotype data for this family
         
         Args:
             family_id (str): id of family
             project_id (str): id of family
-            indiv_id (str): id of individualk
             
         Returns:
-            (JSON) A JSON object of data
+            (list of dicts) 
         '''
         project = get_object_or_404(Project, project_id=project_id)
         genomic_features=[]
@@ -177,8 +175,7 @@ class Command(BaseCommand):
         
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
-        for variant in variants:     
-            #for i,gene_id in enumerate(variant['variant']['gene_ids']):
+        for variant in variants:
             annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
             genomic_features.append({
                                 'gene_symbol':variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['symbol'],
@@ -192,6 +189,22 @@ class Command(BaseCommand):
                                 'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
                             })
         return genomic_features
+    
+    
+    def get_gene_symbol(self,gene_id):
+        '''
+        Given a gene_id, find the symbol from the reference
+        
+        Args:
+            a gene id (str)        
+        Returns:
+            (str) a gene symbol; returns empty string if symbol is not found
+        ''' 
+        gene = get_reference().get_gene(gene_id)
+        gene_symbol = gene['symbol'] if gene else ""
+        return gene_symbol
+    
+    
     
     def format_seqr_hgvs_c(self,hgvsc_from_seqr):
         '''
