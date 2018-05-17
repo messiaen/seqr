@@ -9,6 +9,7 @@ import logging
 import hashlib
 from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import ProjectTag, VariantTag
+from xbrowse import Variant
 from xbrowse_server.mall import get_datastore
 from xbrowse_server.mall import get_reference
 from xbrowse_server.api import utils as api_utils
@@ -47,12 +48,13 @@ class Command(BaseCommand):
         #going with all projects since the list doesn't have project names properly written to match safely (cutnpaste errors)
         all_projects = Project.objects.all()
         all_families=[]
+        so = open("/Users/harindra/Desktop/skipper.txt",'w')
         for project in all_projects:
             for fam in project.get_families():
                 if fam.family_id in families_to_process:
-                    all_families.extend(self.process_family(fam,families_to_process[fam.family_id]))
+                    all_families.extend(self.process_family(fam,families_to_process[fam.family_id],so))
         self.write_to_file(all_families,'/Users/harindra/Desktop/kgp_populated.txt')
-
+        so.close()
 
     def write_to_file(self,fam_details,out_file_name):
         '''
@@ -94,7 +96,7 @@ class Command(BaseCommand):
         out.close()
 
         
-    def process_family(self,fam,input_dets_on_fam):
+    def process_family(self,fam,input_dets_on_fam,so):
         '''
         Process a single family
         
@@ -110,10 +112,11 @@ class Command(BaseCommand):
             target_gene_symbols.append(input_fam['gene_name'])
         fam_details=[]
         genotype_data = self.get_genotype_data(fam.project.project_id,fam.family_id)
-        #if target_gene_symbols[0] =='LAMA2':
-        #    print(target_gene_symbols)
-        #    print(genotype_data)
-        #    sys.exit()
+        if input_fam['gene_name'] in target_gene_symbols and genotype_data ==[]:
+            so.write(str(fam))
+            so.write('\t')
+            so.write(str(target_gene_symbols))
+            so.write('\n')
         for i,entry in enumerate(genotype_data):
             if entry['gene_symbol'] in target_gene_symbols:
                 fam_details.append({
@@ -164,8 +167,18 @@ class Command(BaseCommand):
 
                     if variant is None:
                         logging.info("Variant no longer called in this family (did the callset version change?)")
-                        continue
+                        #continue
+                        variant = Variant.fromJSON({
+                            'xpos': variant_tag.xpos,
+                            'ref': variant_tag.ref,
+                            'alt': variant_tag.alt,
+                            'genotypes': {},
+                            'extras': {'project_id': project.project_id, 'family_id': family_id}
+                            })
                     api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=False,add_populations=False)
+                    
+                    #import pprint
+                    #pprint.pprint(variant.toJSON())
                     
                     if (variant.toJSON()['pos'],variant.toJSON()['pos_end'],variant.toJSON()['chr']) not in already_added_variant:
                         variants.append({"variant": variant.toJSON(),
@@ -175,22 +188,21 @@ class Command(BaseCommand):
         
         current_genome_assembly = self.find_genome_assembly(project)
         genomic_features=[]
+
         for variant in variants:
-            #import pprint
-            #pprint.pprint(variant)
-            annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
-            #pprint.pprint (variant['variant']['annotation']['vep_annotation'][annotation_set_to_use])
-            genomic_features.append({
-                                'gene_symbol':self.get_gene_symbol(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]),
-                                'assembly':current_genome_assembly,
-                                'reference_allele':variant['variant']['ref'],
-                                'alternate_allele':variant['variant']['alt'],
-                                'start':variant['variant']['pos'],
-                                'stop':int(variant['variant']['pos_end']),
-                                'chromosome':variant['variant']['chr'],
-                                'hgvs_c': self.format_seqr_hgvs_c(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc']),
-                                'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
-                            })
+            if variant['variant']['annotation']:
+                annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
+                genomic_features.append({
+                                    'gene_symbol':self.get_gene_symbol(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]),
+                                    'assembly':current_genome_assembly,
+                                    'reference_allele':variant['variant']['ref'],
+                                    'alternate_allele':variant['variant']['alt'],
+                                    'start':variant['variant']['pos'],
+                                    'stop':int(variant['variant']['pos_end']),
+                                    'chromosome':variant['variant']['chr'],
+                                    'hgvs_c': self.format_seqr_hgvs_c(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc']),
+                                    'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
+                                })
         return genomic_features
     
     
