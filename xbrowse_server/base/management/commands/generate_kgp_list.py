@@ -43,7 +43,8 @@ class Command(BaseCommand):
         if options['project_list']:
             projects_to_process=self.process_family_list_file(options['project_list'])
                 
-        so = open("/Users/harindra/Desktop/skipper.txt",'w')
+        skipped_out = open("/Users/harindra/Desktop/skipper.txt",'w')
+        all_families=[]
         for project_id_from_input,input_details in projects_to_process.iteritems():
             for line in input_details:
                 family_id_from_input=line['family_id']
@@ -52,12 +53,16 @@ class Command(BaseCommand):
                 try:
                     project = get_object_or_404(Project, project_id=project_id_from_input)
                 except Exception as e:
-                    so.write(project_id_from_input+"\t"+family_id_from_input + "\t" +gene_id_from_input+"\t:" + e + "\n")
+                    skipped_out.write(project_id_from_input+"\t"+family_id_from_input + "\t" +gene_id_from_input+"\t:" + e + "\n")
                     continue            
                 for i,e in enumerate(get_variants_by_tag(project, 'Known gene for phenotype', family_id=family_id_from_input)):
                     family_details = self.process_family(e.toJSON(),family_id_from_input,project_id_from_input,gene_id_from_input)
-                    print (family_details)
-        so.close()
+                    if family_details:
+                        all_families.append(family_details)
+        results_out =  open("/Users/harindra/Desktop/kgp_populated.txt",'w')
+        self.write_to_file(all_families, results_out)
+        skipped_out.close()
+        results_out.close()
 
 
     def process_family(self,fam,family_id_from_input,project_id_from_input,target_gene_name):
@@ -68,33 +73,27 @@ class Command(BaseCommand):
             (obj) A variant object
             
         Returns:
-            ([dict]) representing a list of dicts of variants of that family
+            [dict] representing information of target variant of that family. None if not a target family
         '''
-        fam_details=[]
         annotation_set_to_use = fam['annotation']['worst_vep_annotation_index']
         vep_annotation = fam['annotation']['vep_annotation'][annotation_set_to_use]
         
         if vep_annotation['gene_symbol'] in target_gene_name:
-            fam_details.append({
+            return {
                             'family_id':family_id_from_input,
                             'gene_name':target_gene_name,
                             'cmg_internal_project_id':project_id_from_input,
                             'seqr_family_page_link':'https://seqr.broadinstitute.org/project/' + project_id_from_input  +'/family/' + family_id_from_input,
-                            #'start' : entry['start'],
-                            #'stop' : entry['stop'],
+                            'start' : fam['pos'],
+                            'stop' : fam['pos_end'],
                             'chromosome' : fam['chr'],
                             'reference_allele' : fam['ref'],
                             'alternate_allele' : fam['alt'],
                             'hgvs_c':vep_annotation['hgvsc'],
                             'hgvs_p':vep_annotation['hgvsp'],
-                         })
-        
-        return fam_details
+                         }
 
-
-
-
-    def write_to_file(self,fam_details,out_file_name):
+    def write_to_file(self,fam_details,out_file):
         '''
         Write the given family details to file
         
@@ -102,119 +101,36 @@ class Command(BaseCommand):
             fam_details (list(dict)): list of family details in form of dictionaries
             out_file_name (str): a name for the output file
         '''
-        
-        with open(out_file_name,'w') as out:
-            headers="%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
-                                                                        'Family ID (CollPrefix_ID)',
-                                                                        'CMG Internal Project ID(s)',
-                                                                        'Gene Name',
-                                                                        'Seqr family page Link',
-                                                                        'Chromosome',
-                                                                        'Start',
-                                                                        'Stop',
-                                                                        'Reference allele',
-                                                                        'Alternate allele',
-                                                                        'HGVS.C',
-                                                                        'HGVS.P')
-            out.write(headers)
-            for fam in fam_details:
-                line = "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
-                                                        fam['family_id'],
-                                                        fam['cmg_internal_project_id'],
-                                                        fam['gene_name'],
-                                                        fam['seqr_family_page_link'],
-                                                        fam['chromosome'],
-                                                        fam['start'],
-                                                        fam['stop'],
-                                                        fam['reference_allele'],
-                                                        fam['alternate_allele'],
-                                                        fam['hgvs_c'],
-                                                        fam['hgvs_p'])
-                out.write(line)
-        out.close()
+        headers="%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
+                                                                    'Family ID (CollPrefix_ID)',
+                                                                    'CMG Internal Project ID(s)',
+                                                                    'Gene Name',
+                                                                    'Seqr family page Link',
+                                                                    'Chromosome',
+                                                                    'Start',
+                                                                    'Stop',
+                                                                    'Reference allele',
+                                                                    'Alternate allele',
+                                                                    'HGVS.C',
+                                                                    'HGVS.P')
+        out_file.write(headers)
+        for i,fam in enumerate(fam_details):
+            line = "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
+                                                    fam['family_id'],
+                                                    fam['cmg_internal_project_id'],
+                                                    fam['gene_name'],
+                                                    fam['seqr_family_page_link'],
+                                                    fam['chromosome'],
+                                                    fam['start'],
+                                                    fam['stop'],
+                                                    fam['reference_allele'],
+                                                    fam['alternate_allele'],
+                                                    self.format_seqr_hgvs_c(fam['hgvs_c']),
+                                                    self.format_seqr_hgvs_p(fam['hgvs_p']))
+            out_file.write(line)
 
 
         
-        
-        
-    def get_genotype_data(self,project_id,family_id):
-        '''
-        Gets genotype data for this family
-        
-        Args:
-            family_id (str): id of family
-            project_id (str): id of family
-            
-        Returns:
-            (list of dicts) 
-        '''
-        project = get_object_or_404(Project, project_id=project_id)
-        genomic_features=[]
-        variants=[]
-        project_tags = ProjectTag.objects.filter(project__project_id=project_id)
-        already_added_variant={}
-        for project_tag in project_tags:
-            variant_tags = VariantTag.objects.filter(project_tag=project_tag)
-            for variant_tag in variant_tags:            
-                if variant_tag.family is not None and family_id == variant_tag.family.family_id:
-                    variant = get_datastore(project).get_single_variant(
-                            project.project_id,
-                            variant_tag.family.family_id,
-                            variant_tag.xpos,
-                            variant_tag.ref,
-                            variant_tag.alt,
-                    )
-
-
-                    if variant is None:
-                        logging.info("Variant no longer called in this family (did the callset version change?)")
-                        #continue
-                        variant = Variant.fromJSON({
-                            'xpos': variant_tag.xpos,
-                            'ref': variant_tag.ref,
-                            'alt': variant_tag.alt,
-                            'genotypes': {},
-                            'extras': {'project_id': project.project_id, 'family_id': family_id}
-                            })
-                    #api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=False,add_populations=False)
-                    for i,e in enumerate(get_variants_by_tag(project, 'Known gene for phenotype', family_id=family_id)):
-                        print (e.toJSON())
-                    
-                    
-                    if family_id == 'B13-52':
-                        #pprint(variant.toJSON())
-                        #pprint(project.project_id)
-                        #pprint(variant_tag.family.family_id)
-                        pass
-                    continue
-
-                    pprint.pprint(variant.toJSON())
-                    
-                    if (variant.toJSON()['pos'],variant.toJSON()['pos_end'],variant.toJSON()['chr']) not in already_added_variant:
-                        variants.append({"variant": variant.toJSON(),
-                                         "family": variant_tag.family.toJSON()
-                                     })
-                        #already_added_variant[(variant.toJSON()['pos'],variant.toJSON()['pos_end'],variant.toJSON()['chr'])]=1
-        
-        current_genome_assembly = self.find_genome_assembly(project)
-        genomic_features=[]
-
-        for variant in variants:
-            if variant['variant']['annotation']:
-                annotation_set_to_use = variant['variant']['annotation']['worst_vep_annotation_index']
-                genomic_features.append({
-                                    'gene_symbol':self.get_gene_symbol(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]),
-                                    'assembly':current_genome_assembly,
-                                    'reference_allele':variant['variant']['ref'],
-                                    'alternate_allele':variant['variant']['alt'],
-                                    'start':variant['variant']['pos'],
-                                    'stop':int(variant['variant']['pos_end']),
-                                    'chromosome':variant['variant']['chr'],
-                                    'hgvs_c': self.format_seqr_hgvs_c(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsc']),
-                                    'hgvs_p': self.format_seqr_hgvs_p(variant['variant']['annotation']['vep_annotation'][annotation_set_to_use]['hgvsp'])
-                                })
-        return genomic_features
-    
     
     def get_gene_symbol(self,variant):
         '''
@@ -302,16 +218,5 @@ class Command(BaseCommand):
         return to_process  
 
 
-        
-    def find_genome_assembly(self,project):
-        """
-        Find the genome assembly of this individual
-        Args:
-            project: This is a seqr.project object reprenting the project
-        Returns:
-        The genome assembly version
-        """
-        if project.genome_version:
-            return 'GRCh' + project.genome_version
-        return 'GRCh37'
+
       
