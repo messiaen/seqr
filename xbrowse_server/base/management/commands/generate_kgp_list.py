@@ -53,7 +53,7 @@ class Command(BaseCommand):
                 try:
                     project = get_object_or_404(Project, project_id=project_id_from_input)
                 except Exception as e:
-                    skipped_out.write(project_id_from_input+"\t"+family_id_from_input + "\t" +gene_id_from_input+"\t:" + e + "\n")
+                    skipped_out.write(project_id_from_input+"\t"+family_id_from_input + "\t" +gene_id_from_input+"\t:" + str(e) + "\n")
                     continue            
                 for i,e in enumerate(get_variants_by_tag(project, 'Known gene for phenotype', family_id=family_id_from_input)):
                     family_details = self.process_family(e.toJSON(),family_id_from_input,project_id_from_input,gene_id_from_input)
@@ -77,8 +77,8 @@ class Command(BaseCommand):
         '''
         annotation_set_to_use = fam['annotation']['worst_vep_annotation_index']
         vep_annotation = fam['annotation']['vep_annotation'][annotation_set_to_use]
-        
-        if vep_annotation['gene_symbol'] in target_gene_name:
+        gene_symbol = vep_annotation['gene_symbol'] if 'gene_symbol' in vep_annotation else vep_annotation['symbol']
+        if gene_symbol in target_gene_name:
             return {
                             'family_id':family_id_from_input,
                             'gene_name':target_gene_name,
