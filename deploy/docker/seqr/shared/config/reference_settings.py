@@ -42,6 +42,7 @@ gtex_samples_file = os.path.join(reference_data_dir, REFERENCE_DATA_FILES['gtex_
 
 omim_genemap_file = os.path.join(reference_data_dir, REFERENCE_DATA_FILES['omim_genmap'])
 clinvar_tsv_file = os.path.join(reference_data_dir, REFERENCE_DATA_FILES['clinvar'])
+clinvar_vcf_file = os.path.join(reference_data_dir, REFERENCE_DATA_FILES['clinvar_vcf'])
 dbnsfp_gene_file = os.path.join(reference_data_dir, REFERENCE_DATA_FILES['dbnsfp'])
 
 has_phenotype_data = False

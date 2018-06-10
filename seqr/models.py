@@ -444,7 +444,7 @@ class Dataset(ModelWithGUID):
     description = models.TextField(null=True, blank=True)
     status = models.CharField(null=True, blank=True, db_index=True, max_length=1, choices=DATASET_STATUS_CHOICES)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    genome_version = models.CharField(max_length=10, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     # When a dataset is copied from source_file_path to an internal seqr database or directory,
     # the dataset_id should be the pointer used to query this data. Although global uniqueness
@@ -539,14 +539,14 @@ class VariantTagType(ModelWithGUID):
 class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    genome_version = models.CharField(max_length=10, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
 
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_genome_version = models.CharField(max_length=10, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
     lifted_over_xpos_start = models.BigIntegerField(null=True)
     lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
@@ -576,14 +576,14 @@ class VariantNote(ModelWithGUID):
     note = models.TextField(null=True, blank=True)
     submit_to_clinvar = models.BooleanField(default=False)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    genome_version = models.CharField(max_length=10, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
 
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_genome_version = models.CharField(max_length=10, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
     lifted_over_xpos_start = models.BigIntegerField(null=True)
     lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
@@ -640,7 +640,7 @@ class LocusListGene(ModelWithGUID):
 class LocusListInterval(ModelWithGUID):
     locus_list = models.ForeignKey('LocusList', on_delete=models.CASCADE)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    genome_version = models.CharField(max_length=10, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
